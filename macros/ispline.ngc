@@ -1,0 +1,76 @@
+(author: P. Lopes)
+(version: 0.1)
+(date: 04/01/18)
+
+o<ispline> sub
+  #<tool_tip_angle>=#1
+  #<tool_diam>=#2
+  #<hole_diam>=#3
+  #<spline_diam>=#4
+  #<doc>=#5
+  #<num_splines>=#6
+  #<z_depth>=#7
+  #<feed_speed>=#8
+  #<rapid_speed>=#9
+
+
+  o10 if [#<tool_diam> gt #<hole_diam>]
+    (debug, tool_diam can't be larger than hole_diam)
+    o<ispline> endsub [0]
+  o10 endif
+
+  o11 if [#<spline_diam> lt #<hole_diam>]
+    (debug, spline_diam can't be smaller than hole_diam)
+    o<ispline> endsub [0]
+  o11 endif
+
+  (O<ISPLINE> CALL [-90] [4.96] [5.6] [6.45] [0.007] [25] [5.2] [500] [5000] )
+
+  #<total_travel_radius> = [[#<spline_diam>-#<tool_diam>]/2]
+	#<angle>=[360/#<num_splines>]
+  (debug,total_travel_radius=#<total_travel_radius>, angle=#<angle>)
+
+  #<rapid_speed>=#<rapid_speed>
+
+  #<z_orig>=#<_z>
+  #<x_orig>=#<_x>
+  #<y_orig>=#<_y>
+	#<curr_angle>=0
+  o100 while [ #<curr_angle> lt 360 ]
+    #<sin_a>=sin[#<curr_angle>+#<tool_tip_angle>]
+    #<cos_a>=cos[#<curr_angle>+#<tool_tip_angle>]
+
+    ;;;(debug, angle=#]<curr_angle>, x=#<x_pos>, #y=#<y_pos>)
+    m19 r[#<curr_angle>] Q2
+  
+    #<curr_travel_radius>=[[[#<hole_diam>-#<tool_diam>]/2]+#<doc>]
+    o101 while [ #<curr_travel_radius> le #<total_travel_radius> ]
+      #<y_pos>=[#<sin_a>*#<curr_travel_radius>]
+      #<x_pos>=[#<cos_a>*#<curr_travel_radius>]
+      #<z_pos>=#<z_depth>  
+      
+      g1 x[#<x_orig>-#<x_pos>] y[#<y_orig>+#<y_pos>] f#<rapid_speed>
+      g1 z[#<z_orig>-#<z_pos>] f#<feed_speed>
+      
+      g1 x[#<x_orig>] y[#<y_orig>] f#<rapid_speed>
+      g1 z[#<z_orig>] f#<rapid_speed>
+
+      g1 x[#<x_orig>-#<x_pos>] y[#<y_orig>+#<y_pos>] f#<rapid_speed>
+      g1 z[#<z_orig>-#<z_pos>] f#<feed_speed>
+      
+      g1 x[#<x_orig>] y[#<y_orig>] f#<rapid_speed>
+      g1 z[#<z_orig>] f#<rapid_speed>
+
+      o10101 if [#<curr_travel_radius> lt #<total_travel_radius> and [#<curr_travel_radius>+#<doc>] gt #<total_travel_radius>] 
+        #<curr_travel_radius>=#<total_travel_radius>
+      o10101 else
+        #<curr_travel_radius>=[#<curr_travel_radius>+#<doc>]
+      o10101 endif
+    o101 endwhile
+
+	  #<curr_angle>=[#<curr_angle>+#<angle>]
+  o100 endwhile
+
+
+o<ispline> endsub [1]
+m2

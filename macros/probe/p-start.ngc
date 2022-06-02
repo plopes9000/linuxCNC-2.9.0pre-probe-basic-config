@@ -1,0 +1,26 @@
+o<p-start> sub
+(start probe)
+
+#<probe_tool_number>=#<_ini[PROBE]TOOL_NUMBER>
+o<pcheck1> if [ #5400 NE #<probe_tool_number> ]
+  (abort, Please load probe - T#<probe_tool_number> M6)
+  o<p-start> endsub [-1]
+o<pcheck1> endif
+
+M5 (Stop spindle)
+
+M19 r0 (orient probe)
+
+M65 P0 (activate probe input)
+m64 P1 (start 3d probe)
+m65 P1 (reset start 3d probe)
+g4 p1 ; dwell
+
+m66 P0 l0 (check if probe did activate)
+o292 if [#5399 eq 1]
+  (abort, probe not activated)
+  o<p-start> endsub [-1]
+o292 endif
+
+o<p-start> endsub [0]
+M2

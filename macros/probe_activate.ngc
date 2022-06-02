@@ -1,0 +1,26 @@
+o<probe_activate> sub
+(start probe)
+
+M5 (Stop spindle)
+
+M19 r0 (orient probe)
+
+
+m66 P0 l0 (check if probe is not yet activate)
+o10 if [#5399 eq 1]
+
+M65 P0 (activate probe input)
+m64 P1 (start 3d probe)
+m65 P1 (reset start 3d probe)
+g4 p1 ; dwell
+
+m66 P0 l0 (check if probe did activate)
+o20 if [#5399 eq 1]
+  (MSG, Could not activate probe, aborting)
+  o<probe_activate> return [-1]
+o20 endif
+
+o10 endif
+
+o<probe_activate> endsub [0]
+M2

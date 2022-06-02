@@ -1,0 +1,7 @@
+( see https://www.practicalmachinist.com/vb/haas/dwo-macro-4th-axis-347509/ )
+o<dwo_off> sub
+
+(Cancel DWO OFFSET)
+G52 X0 Y0 Z0 
+
+o<dwo_off> endsub

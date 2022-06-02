@@ -1,0 +1,52 @@
+( see https://www.practicalmachinist.com/vb/haas/dwo-macro-4th-axis-347509/ )
+o<dwo_on> sub
+
+(CANCEL G52 OFFSET)
+G52 X0 Y0 Z0
+
+(X,Y,Z ROTARY CENTER)
+#<x-rot-point>=[#<_ini[XYZAC_KINS]X-ROT-POINT>]
+#<y-rot-point>=[#<_ini[XYZAC_KINS]Y-ROT-POINT>]
+#<z-rot-point>=[#<_ini[XYZAC_KINS]Z-ROT-POINT>]
+#<dy>=[#<_ini[XYZAC_KINS]Y-OFFSET>]
+#<dz>=[#<_ini[XYZAC_KINS]Z-OFFSET>]
+
+(CURRENT WORKOFFSET X,Y,Z SETTING)
+#<x-pos> = #[5221+[#5220-1]*30]
+#<y-pos> = #[5222+[#5220-1]*30]
+#<z-pos> = #[5223+[#5220-1]*30]
+
+(CURRENT WORKOFFSET ANGLES TO CALCULATE)
+#<a_deg> = #<_a>
+#<c_deg> = #<_c>
+
+(NEW X POS)
+#<new-x-pos>=[             + COS[#<c_deg>]                 * [#<x-pos> - #<x-rot-point>]]
+#<new-x-pos>=[#<new-x-pos> - SIN[#<c_deg>]                 * [#<y-pos> - #<y-rot-point>]]
+#<new-x-pos>=[#<new-x-pos> + #<x-rot-point>]
+
+(NEW Y POS)
+#<new-y-pos>=[             + SIN[#<c_deg>] * COS[#<a_deg>] * [#<x-pos> - #<x-rot-point>]]
+#<new-y-pos>=[#<new-y-pos> + COS[#<c_deg>] * COS[#<a_deg>] * [#<y-pos> - #<y-rot-point>]]
+#<new-y-pos>=[#<new-y-pos> -                 SIN[#<a_deg>] * [#<z-pos> - #<z-rot-point>]]
+#<new-y-pos>=[#<new-y-pos> -                 COS[#<a_deg>] * #<dy>]
+#<new-y-pos>=[#<new-y-pos> +                 SIN[#<a_deg>] * #<dz>]
+#<new-y-pos>=[#<new-y-pos> + #<dy>]
+#<new-y-pos>=[#<new-y-pos> + #<y-rot-point>]
+
+(NEW Z POS)
+#<new-z-pos>=[             + SIN[#<c_deg>] * SIN[#<a_deg>] * [#<x-pos> - #<x-rot-point>]]
+#<new-z-pos>=[#<new-z-pos> + COS[#<c_deg>] * SIN[#<a_deg>] * [#<y-pos> - #<y-rot-point>]]
+#<new-z-pos>=[#<new-z-pos> +                 COS[#<a_deg>] * [#<z-pos> - #<z-rot-point>]]
+#<new-z-pos>=[#<new-z-pos> -                 SIN[#<a_deg>] * #<dy>]
+#<new-z-pos>=[#<new-z-pos> -                 COS[#<a_deg>] * #<dz>]
+#<new-z-pos>=[#<new-z-pos> + #<dz>]
+#<new-z-pos>=[#<new-z-pos> + #<z-rot-point>]
+
+(SET DIFF AS G52)
+G52 X[#<new-x-pos>-#<x-pos>] Y[#<new-y-pos>-#<y-pos>] Z[#<new-z-pos>-#<z-pos>]
+
+
+
+
+o<dwo_on> endsub

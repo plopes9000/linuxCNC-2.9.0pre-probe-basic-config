@@ -1,0 +1,389 @@
+o<auto_tool_change> sub
+;(debug, current_tool=#<tool_in_spindle> current_pocket=#<current_pocket>, selected_tool=#<selected_tool> selected_pocket=#<selected_pocket>)
+
+; auto tool change 
+; expected behavior:
+;   start condition: ATC empty   
+;       T1 M6 - performs a manual tool change to T1, T1 is not yet ATC bound
+;       T0 M6 - performs a manual tool change leaving an empty spindle and empty ATC 
+;       T1 M6 - same as above, performs a manual tool change to T1, T1 is not yet ATC bound
+;       M16   - bind T1 to the ATC, T1 is now ATC bound
+;       T0 M6 - store T1 from the spindle to the ATC
+;       T1 M6 - load T1 from ATC to Spindle
+;       T2 M6 - store T1 from the spindle to the ATC, and perform a manual change for T2, T2 is not ATC bound
+;       M16   . bind T2 to the ATC, T2 is now ATC bound
+;       T1 M6 - store T2 in ATC, load T1 from ATC to the Spindle
+;       M17   - unbinds T1 from ATC
+;       T0 M6 - performs a manual tool change leaving an empty spindle, and T2 in the ATC 
+
+
+
+; atc specs
+#<left_positions> = [#<_ini[atc]left_pockets>]    ; left atc pockets
+#<left_deg_pos>   = [360/#<left_positions>]
+#<left_retract_carousel>         = [#<_ini[atc]left_dout_retract>]
+#<left_extend_carousel>          = [#<_ini[atc]left_dout_extend>]
+#<left_is_tool_in_pocket>        = [#<_ini[atc]left_din_tool_in_pocket>]  ; motion.digital-in-xx
+#<left_atc_spindle_orientation>  = [#<_ini[atc]left_spindle_orient>]
+
+#<right_positions>= [#<_ini[atc]right_pockets>]    ; right atc pockets
+#<right_deg_pos>  = [360/#<right_positions>]
+#<right_retract_carousel>        = [#<_ini[atc]right_dout_retract>]
+#<right_extend_carousel>         = [#<_ini[atc]right_dout_extend>]
+#<right_is_tool_in_pocket>       = [#<_ini[atc]right_din_tool_in_pocket>]    ; motion.digital-in-xx
+#<right_atc_spindle_orientation> = [#<_ini[atc]right_spindle_orient>]
+
+;atc process config
+#<z_fine_feed>                   = [#<_ini[atc]z_fine_feed>]
+#<z_fine_position>               = [#<_ini[atc]z_fine_position>]
+#<z_coarse_feed>                 = [#<_ini[atc]z_coarse_feed>]
+#<z_coarse_position>             = [#<_ini[atc]z_coarse_position>]
+#<my_tool_in_spindle>            = [#<_ini[atc]var_tool_in_spindle>]           ; relies on eg. 4090 to be manually created in linuxcnc.var file
+#<my_tool_in_spindle_atc_bound>  = [#<_ini[atc]var_tool_in_spindle_atc_bound>] ; relies on eg. 4091 to be manually created in linuxcnc.var file
+#<toolstart>                     = [#<_ini[atc]var_tools_start>] ; relies on eg. 4902-4938, #<left_positions> + #<right_positions> to be manually created in linuxcnc.var file
+
+; ignore if not in actual execution
+o11 if [ #<_task> ne 1 ]
+  ;(debug, task not 1, bailing out)
+  o<auto_tool_change> endsub [1]
+o11 endif
+
+; quick sanity check
+o10 if [#<tool_in_spindle> eq #<selected_tool>]
+  ;(debug, atc_end1)
+	#[#<my_tool_in_spindle>] = #<selected_tool> ; set spindle tool to new tool
+  m61 q#<selected_tool> 
+
+  #<z_offset>=#5403
+  #<tool_length>=#5411 (default to Tool Back Angle, here used as aproximate tool length)
+  o10300 if [#<selected_tool> ne 0 and #<z_offset> eq #<tool_length> ]
+    (abort, aborting since tool z offset apears not valid, z offset=tool length hint=#<z_offset>)
+  o10300 endif
+
+  o<auto_tool_change> endsub [1]
+o10 endif
+
+; aux vars
+#<pick_up_pocket> = 0 ; assigns 0 to the pick up pocket for a later check if the tool is found in the carousel
+#<drop_in_pocket> = 0
+
+; look for an empty pocket and desired tool pocket
+#<loop_idx>=[#<left_positions>+#<right_positions>]
+o20 while [ #<loop_idx> gt 0 ]
+  o21 if [ #[#<toolstart>+#<loop_idx>-1] eq #<selected_tool> ] ; checks all pockets to see if it contains tool number requested
+		#<pick_up_pocket> = #<loop_idx> ; if tool is found in pocket, assigns the pick up pocket
+  o21 endif
+  o22 if [ #[#<toolstart>+#<loop_idx>-1] eq 0 and #[#<my_tool_in_spindle_atc_bound>] eq 1 ] ; checks if the pocket is empty, last pocket checked will be the lowest empty pocket number, for putting tool in spindle away.
+		#<drop_in_pocket> = #<loop_idx> ; 
+  o22 endif
+  #<loop_idx>=[#<loop_idx>-1]
+o20 endwhile
+
+#<same_carousel>=0   
+o30 if [#<selected_tool> ne 0  and #[#<my_tool_in_spindle_atc_bound>] eq 1 ] 
+ o31 if [#<pick_up_pocket> gt #<left_positions>]
+  o32 if [#<drop_in_pocket> gt  #<left_positions>]
+    #<same_carousel>=1
+  o32 endif
+ o31 endif
+ o33 if [#<pick_up_pocket> le #<left_positions>]
+  o34 if [#<drop_in_pocket> le  #<left_positions>]
+    #<same_carousel>=1
+  o34 endif
+ o33 endif
+o30 endif
+
+;(debug, -----------------)
+;(debug,drop_in_pocket=#<drop_in_pocket> pick_up_pocket=#<pick_up_pocket>, same_carousel=#<same_carousel>) 
+
+;now we know which pocket the next tool is sitting in
+;we need to know if we need to put a tool away
+;or if there is no tool in the spindle
+
+o<home-spindle> call
+m19 r#<left_atc_spindle_orientation> Q5; align the spindle
+
+g49 (disable offsets)
+ 
+
+o180 if [ #<tool_in_spindle> gt 0 and #[#<my_tool_in_spindle_atc_bound>] eq 1] ; checks if there is a valid tool in the spindle
+  o190 if [#<drop_in_pocket> eq 0] ;If there is a tool in the spindle, checks if there is an drop in pocket
+		 (abort, carousel is full, cant put away tool into carousel)
+	o190 endif
+
+  ; ensure carousel is in current tool pocket pos
+  o191 if [#<drop_in_pocket> le #<left_positions>] ; left atc?
+    m19 r#<left_atc_spindle_orientation> Q5; align the spindle
+
+    #<current_positioned_pocket>=abs[round[#<_u>/#<left_deg_pos>]+1]
+
+    ;(debug,  pocket=#<drop_in_pocket> u=#<_u> curr pkt pos= #<current_positioned_pocket>)
+    #<current_adj_positioned_pocket>=#<current_positioned_pocket>
+    o1911 while [#<current_adj_positioned_pocket> gt #<left_positions>]
+      #<current_adj_positioned_pocket>=[#<current_adj_positioned_pocket>-#<left_positions>] 
+      ;(debug, adjusted curr pkt pos= #<current_adj_positioned_pocket>)
+    o1911 endwhile 
+
+    o1912 if [abs[#<drop_in_pocket> - #<current_adj_positioned_pocket>] le [#<left_positions> / 2]]
+      #<distance>=[#<drop_in_pocket>-#<current_adj_positioned_pocket>]
+      ;(debug, distance1: #<distance>)
+    o1912 elseif [#<drop_in_pocket> lt #<current_adj_positioned_pocket>]
+      #<distance>=[#<left_positions>-#<current_adj_positioned_pocket>+#<drop_in_pocket>]
+      ;(debug, distance2: #<distance>)
+    o1912 else
+      #<distance>=[#<drop_in_pocket>-#<left_positions>-#<current_adj_positioned_pocket>]
+      ;(debug, distance3: #<distance>)
+    o1912 endif
+    
+    o1913 if [ #<distance> gt 0 ]
+      (DEBUG, EVAL[vcp.getWidget{"dynatc_left"}.rotate{#<distance>, "cw"}])
+    o1913 else
+      #<abs_distance>=[-1*#<distance>]
+      (DEBUG, EVAL[vcp.getWidget{"dynatc_left"}.rotate{#<abs_distance>, "ccw"}])
+    o1913 endif
+    g53 g0 u[[#<current_positioned_pocket>+#<distance>-1]*#<left_deg_pos>]
+
+    #<retract_carousel>=#<left_retract_carousel>
+    #<extend_carousel>=#<left_extend_carousel>
+    #<is_tool_in_pocket>=#<left_is_tool_in_pocket>
+  o191 elseif [#<drop_in_pocket> le [#<left_positions>+#<right_positions>]] ; right atc?
+    m19 r#<right_atc_spindle_orientation> Q5; align the spindle
+    
+    #<current_positioned_pocket>=abs[round[#<_v>/#<right_deg_pos>]+1]
+    ;(debug,  pocket=#<drop_in_pocket> v=#<_v> curr pkt pos= #<current_positioned_pocket>)
+    #<current_adj_positioned_pocket>=#<current_positioned_pocket>
+    o1921 while [#<current_adj_positioned_pocket> gt #<right_positions>]
+      #<current_adj_positioned_pocket>=[#<current_adj_positioned_pocket>-#<right_positions>] 
+      ;(debug, adjusted curr pkt pos= #<current_adj_positioned_pocket>)
+    o1921 endwhile 
+
+    o1922 if [abs[#<drop_in_pocket> - #<current_adj_positioned_pocket>] le [#<right_positions> / 2]]
+      #<distance>=[#<drop_in_pocket>-#<current_adj_positioned_pocket>]
+      ;(debug, distance1: #<distance>)
+    o1922 elseif [#<drop_in_pocket> lt #<current_adj_positioned_pocket>]
+      #<distance>=[#<right_positions>-#<current_adj_positioned_pocket>+#<drop_in_pocket>]
+      ;(debug, distance2: #<distance>)
+    o1922 else
+      #<distance>=[#<drop_in_pocket>-#<right_positions>-#<current_adj_positioned_pocket>]
+      ;(debug, distance3: #<distance>)
+    o1922 endif
+
+    o1923 if [ #<distance> gt 0 ]
+      (DEBUG, EVAL[vcp.getWidget{"dynatc_right"}.rotate{#<distance>, "cw"}])
+    o1923 else
+      #<abs_distance>=[-1*#<distance>]
+      (DEBUG, EVAL[vcp.getWidget{"dynatc_right"}.rotate{#<abs_distance>, "ccw"}])
+    o1923 endif
+    g53 g0 v[[#<current_positioned_pocket>+#<distance>-1]*#<right_deg_pos>]
+
+    #<retract_carousel>=#<right_retract_carousel>
+    #<extend_carousel>=#<right_extend_carousel>
+    #<is_tool_in_pocket>=#<right_is_tool_in_pocket>
+  o191 else
+    (abort, invalid drop in pocket: #<drop_in_pocket> )
+  o191 endif
+
+  g4 p1 ; dwell
+  m66 p[#<is_tool_in_pocket>] l0; check if there is a tool in carousel pocket
+  o192 if [#5399 eq 1]
+    (abort, pocket #<drop_in_pocket> not empty, tool detected, din:#<is_tool_in_pocket>)
+  o192 endif
+
+  ; move to z clamp/release position
+  g53 g1 z[#<z_fine_position>] f[#<z_coarse_feed>]
+
+  m#<extend_carousel> q0
+  g4 p1 ; dwell
+
+  m11 ; release tool
+  g4 p0.5 ; dwell
+
+  #[#<toolstart>+#<drop_in_pocket>-1] = #<tool_in_spindle> ; save tool number in pocket
+	#[#<my_tool_in_spindle>] = 0 ; set spindle tool to 'empty'
+  #[#<my_tool_in_spindle_atc_bound>] = 0 ; set spindle tool manual flag to true
+  ; declare empty spindle for now
+  m61 q0 g49
+
+  o193 if [#<drop_in_pocket> le #<left_positions>] ; left atc?
+    (DEBUG, EVAL[vcp.getWidget{"dynatc_left"}.store_tool{#<drop_in_pocket>, #<tool_in_spindle>}])
+  o193 elseif [#<drop_in_pocket> le [#<left_positions>+#<right_positions>]] ; right atc?
+    (DEBUG, EVAL[vcp.getWidget{"dynatc_right"}.store_tool{#<drop_in_pocket>, #<tool_in_spindle>}])
+  o193 endif
+
+  ; go to safe z
+  g53 g1 z[#<z_coarse_position>] f[#<z_fine_feed>]
+  g53 g1 z[#<_ini[axis_z]max_limit>] f[#<z_coarse_feed>]
+
+  o197 if [#<same_carousel> eq 0 or #<pick_up_pocket> eq 0]
+    m#<retract_carousel> q0
+
+    m10 ; clamp tool
+  o197 endif
+
+
+o180 elseif [#<tool_in_spindle> gt 0 and #[#<my_tool_in_spindle_atc_bound>] eq 0 ]
+  m19 r#<left_atc_spindle_orientation> Q5; align the spindle
+  
+  ; go to safe z
+  g53 g1 z[#<_ini[axis_z]max_limit>] f[#<z_coarse_feed>]
+  M6 T0
+
+  #<tool_in_spindle>=0
+	#[#<my_tool_in_spindle>] = 0 ; set spindle tool to 'empty'
+  #[#<my_tool_in_spindle_atc_bound>] = 0 ; set spindle tool manual flag to true  
+o180 endif
+
+ 
+o130 if [#<pick_up_pocket> eq 0] ; if tool is not found, notify and default to manual tool change
+  ;(debug, requested tool no #<selected_tool> not in carousel)
+  m19 r#<left_atc_spindle_orientation> Q5; align the spindle
+  o1301 if [#<selected_tool> gt 0]
+    ; go to safe z
+    g53 g1 z[#<_ini[axis_z]max_limit>] f[#<z_coarse_feed>]
+    ;(debug, manual tool change for #<selected_tool>)
+    T#<selected_tool> M6
+    #<z_offset>=#5403
+    #<tool_length>=#5411 (default to Tool Back Angle, here used as aproximate tool length)
+    o130300 if [#<selected_tool> ne 0 and  #<z_offset> eq #<tool_length> ]
+      (abort, aborting since tool z offset apears not valid, z offset=tool length hint=#<z_offset>)
+    o130300 endif
+  o1301 else
+    ;(debug, 2 -manual tool change for #<selected_tool>)
+    m61 q0 g49
+  o1301 endif
+	#[#<my_tool_in_spindle>] = #<selected_tool> ; set spindle tool to new tool
+  #[#<my_tool_in_spindle_atc_bound>] = 0 ; set spindle tool manual flag to true
+  o<auto_tool_change> endsub [1]
+o130 endif
+
+
+
+
+o200 if [#<selected_tool> gt 0] ; selected tool is not tool 0
+  ; ensure carousel is in current tool pocket pos
+  o291 if [#<pick_up_pocket> le #<left_positions>] ; left atc?
+    m19 r#<left_atc_spindle_orientation> Q5; align the spindle
+
+    #<current_positioned_pocket>=abs[round[#<_u>/#<left_deg_pos>]+1]
+    ;(debug,  pocket=#<drop_in_pocket> u=#<_u> curr pkt pos= #<current_positioned_pocket>)
+    #<current_adj_positioned_pocket>=#<current_positioned_pocket>
+    o2911 while [#<current_adj_positioned_pocket> gt #<left_positions>]
+      #<current_adj_positioned_pocket>=[#<current_adj_positioned_pocket>-#<left_positions>] 
+      ;(debug, adjusted curr pkt pos= #<current_adj_positioned_pocket>)
+    o2911 endwhile 
+
+    o2912 if [abs[#<pick_up_pocket> - #<current_adj_positioned_pocket>] le [#<left_positions> / 2]]
+      #<distance>=[#<pick_up_pocket>-#<current_adj_positioned_pocket>]
+      ;(debug, distance1: #<distance>)
+    o2912 elseif [#<pick_up_pocket> lt #<current_adj_positioned_pocket>]
+      #<distance>=[#<left_positions>-#<current_adj_positioned_pocket>+#<pick_up_pocket>]
+      ;(debug, distance2: #<distance>)
+    o2912 else
+      #<distance>=[#<pick_up_pocket>-#<left_positions>-#<current_adj_positioned_pocket>]
+      ;(debug, distance3: #<distance>)
+    o2912 endif
+
+    o2913 if [ #<distance> gt 0 ]
+      (DEBUG, EVAL[vcp.getWidget{"dynatc_left"}.rotate{#<distance>, "cw"}])
+    o2913 else
+      #<abs_distance>=[-1*#<distance>]
+      (DEBUG, EVAL[vcp.getWidget{"dynatc_left"}.rotate{#<abs_distance>, "ccw"}])
+    o2913 endif
+    g53 g0 u[[#<current_positioned_pocket>+#<distance>-1]*#<left_deg_pos>]
+
+    #<retract_carousel>=#<left_retract_carousel>
+    #<extend_carousel>=#<left_extend_carousel>
+    #<is_tool_in_pocket>=#<left_is_tool_in_pocket>
+  o291 elseif [#<pick_up_pocket> le [#<left_positions>+#<right_positions>]] ; right atc?
+    ;(debug, m19 r#<right_atc_spindle_orientation> Q5)
+    m19 r#<right_atc_spindle_orientation> Q5; align the spindle
+
+    #<current_positioned_pocket>=abs[round[#<_v>/#<right_deg_pos>]+1]
+    ;(debug,  pocket=#<pick_up_pocket> v=#<_v> curr pkt pos= #<current_positioned_pocket>)
+    #<current_adj_positioned_pocket>=#<current_positioned_pocket>
+    o2931 while [#<current_adj_positioned_pocket> gt #<right_positions>]
+      #<current_adj_positioned_pocket>=[#<current_adj_positioned_pocket>-#<right_positions>] 
+      ;(debug, adjusted curr pkt pos= #<current_adj_positioned_pocket>)
+    o2931 endwhile 
+
+    o2932 if [abs[#<pick_up_pocket> - #<current_adj_positioned_pocket>] le [#<right_positions> / 2]]
+      #<distance>=[#<pick_up_pocket>-#<current_adj_positioned_pocket>]
+      ;(debug, distance1: #<distance>)
+    o2932 elseif [#<pick_up_pocket> lt #<current_adj_positioned_pocket>]
+      #<distance>=[#<right_positions>-#<current_adj_positioned_pocket>+#<pick_up_pocket>]
+      ;(debug, distance2: #<distance>)
+    o2932 else
+      #<distance>=[#<pick_up_pocket>-#<right_positions>-#<current_adj_positioned_pocket>]
+      ;(debug, distance3: #<distance>)
+    o2932 endif
+
+    o2933 if [ #<distance> gt 0 ]
+      (DEBUG, EVAL[vcp.getWidget{"dynatc_right"}.rotate{#<distance>, "cw"}])
+    o2933 else
+      #<abs_distance>=[-1*#<distance>]
+      (DEBUG, EVAL[vcp.getWidget{"dynatc_right"}.rotate{#<abs_distance>, "ccw"}])
+    o2933 endif
+    g53 g0 v[[#<current_positioned_pocket>+#<distance>-1]*#<right_deg_pos>]
+
+    #<retract_carousel>=#<right_retract_carousel>
+    #<extend_carousel>=#<right_extend_carousel>
+    #<is_tool_in_pocket>=#<right_is_tool_in_pocket>
+  o291 else
+    (abort, invalid drop in pocket: #<pick_up_pocket> )
+  o291 endif
+
+  g4 p1 ; dwell
+  m66 p[#<is_tool_in_pocket>] l0; check if there is a tool in carousel pocket
+  o292 if [#5399 eq 0]
+    (abort, no tool detected in pocket #<pick_up_pocket>, din:#<is_tool_in_pocket>)
+  o292 endif
+
+  o297 if [#<tool_in_spindle> eq 0 or #<same_carousel> eq 0]
+    o2971 if [#<tool_in_spindle> eq 0]
+      ; go to safe z
+      g53 g1 z[#<_ini[axis_z]max_limit>] f[#<z_coarse_feed>]
+    o2971 endif
+    
+    m#<extend_carousel> q0
+    g4 p1 ; dwell
+
+    m11 ; release tool
+  o297 endif
+
+  ; move to z clamp/release position
+  g53 g1 z[#<z_coarse_position>] f[#<z_coarse_feed>]
+  g53 g1 z[#<z_fine_position>] f[#<z_fine_feed>]
+
+  m10 ; clamp tool
+
+  #[#<toolstart>+#<pick_up_pocket>-1] = 0 ; empty the pocket
+  #[#<my_tool_in_spindle>] = #<selected_tool>  ;Set persistent variable to remember tool in spindle after power cycle
+  #[#<my_tool_in_spindle_atc_bound>] = 1 ; set spindle tool manual flag to false
+  o298 if [#<pick_up_pocket> le #<left_positions>] ; left atc?
+    (DEBUG, EVAL[vcp.getWidget{"dynatc_left"}.store_tool{#<pick_up_pocket>, 0}])
+  o298 elseif [#<pick_up_pocket> le [#<left_positions>+#<right_positions>]] ; right atc?
+    (DEBUG, EVAL[vcp.getWidget{"dynatc_right"}.store_tool{#<pick_up_pocket>, 0}])
+  o298 endif
+
+  m#<retract_carousel> q0
+
+  ; go to safe z
+  g53 g1 z[#<_ini[axis_z]max_limit>] f[#<z_coarse_feed>]
+
+o200 else
+  ; nothing to do as of now, since we retracted after dropping the tool
+o200 endif
+
+; declare new tool, load tool offsets
+m61 q#<selected_tool> 
+
+#<z_offset>=#5403
+#<tool_length>=#5411 (default to Tool Back Angle, here used as aproximate tool length)
+o300 if [#<selected_tool> ne 0 and  #<z_offset> eq #<tool_length> ]
+    (abort, aborting since tool z offset apears not valid, z offset=tool length hint=#<z_offset>)
+o300 endif
+
+
+;(debug, atc_end final)
+o<auto_tool_change> endsub [1]
+m2

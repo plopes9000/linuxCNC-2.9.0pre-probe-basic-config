@@ -1,0 +1,108 @@
+def my_error_task(self):
+        error = e.poll()
+        while error: 
+            kind, text = error
+            if kind in (linuxcnc.NML_ERROR, linuxcnc.OPERATOR_ERROR):
+                icon = "error"
+                ucomp["error"]=True
+            else:
+                icon = "info"
+            notifications.add(icon, text)
+            error = e.poll()
+        self.error_after = self.win.after(200, self.error_task)
+
+def my_remove(self, widgets):
+    self.widgets.remove(widgets)
+    if len(self.cache) < 10:
+        widgets[0].pack_forget()
+        self.cache.append(widgets)
+    else:
+        widgets[0].destroy()
+    if len(self.widgets) == 0:
+        ucomp["error"]=False
+        self.place_forget()
+
+LivePlotter.error_task = my_error_task
+Notification.remove = my_remove
+
+if hal_present == 1 :
+    ucomp = hal.component("probe.user")
+    ucomp.newpin("error",hal.HAL_BIT,hal.HAL_IN)
+ucomp.ready()
+
+
+root_window.tk.call('set','check_1', 'False')
+root_window.tk.call('set','check_2', 'False')
+root_window.tk.call('set','check_3', 'False')
+root_window.tk.call('grid','forget','.pane.top.tabs.fmanual.axes.axisu')
+root_window.tk.call('grid','forget','.pane.top.tabs.fmanual.axes.axisv')
+
+
+root_window.tk.call('checkbutton','.pane.top.tabs.fmanual.showUVAxisCheckButton','-text','Show U/V Axis','-command','showUVAxisCheckButton_clicked','-height','1', '-variable', 'check_1')
+root_window.tk.call('grid','.pane.top.tabs.fmanual.showUVAxisCheckButton','-column','1','-row','7','-columnspan','1','-padx','4','-sticky','w')
+root_window.tk.call('checkbutton','.pane.top.tabs.fmanual.disableWaysLube','-text','Disable Ways Lube Cycle','-command','disableWaysLubeButton_clicked','-height','1', '-variable', 'check_3')
+root_window.tk.call('grid','.pane.top.tabs.fmanual.disableWaysLube','-column','1','-row','8','-columnspan','1','-padx','4','-sticky','w')
+root_window.tk.call('button','.pane.top.tabs.fmanual.machineLights','-text','Lights','-command','machineLightsButton_clicked','-height','1')
+root_window.tk.call('grid','.pane.top.tabs.fmanual.machineLights','-column','0','-row','9','-columnspan','1','-padx','4','-sticky','w')
+root_window.tk.call('button','.pane.top.tabs.fmanual.runWaysLube','-text','Run Ways Lube','-command','runWaysLubeButton_clicked','-height','1')
+root_window.tk.call('grid','.pane.top.tabs.fmanual.runWaysLube','-column','1','-row','9','-columnspan','1','-padx','4','-sticky','w')
+root_window.tk.call('checkbutton','.pane.top.tabs.fmanual.disableATClpSensors','-text','CAUTION: Disable ATC lift/push crash sensors','-command','disableATClpSensorsButton_clicked','-height','1', '-variable', 'check_2')
+root_window.tk.call('grid','.pane.top.tabs.fmanual.disableATClpSensors','-column','1','-row','10','-columnspan','1','-padx','4','-sticky','w')
+
+axisui_atc = hal.component('axisui_atc')
+axisui_atc.newpin('disable_lp_sensors',hal.HAL_BIT,hal.HAL_IN)
+axisui_atc.ready()
+
+axisui_ways_lube = hal.component('axisui_ways_lube')
+axisui_ways_lube.newpin('disable',hal.HAL_BIT,hal.HAL_IN)
+axisui_ways_lube.newpin('run_cycle',hal.HAL_BIT,hal.HAL_IO)
+axisui_ways_lube.ready()
+
+machine_lights = hal.component('machine_lights')
+machine_lights.newpin('lights_on',hal.HAL_BIT,hal.HAL_OUT)
+machine_lights.ready()
+
+# functions called from the buttons
+
+def showUVAxisCheckButton_clicked() :
+    # Tcl's [set] with only one argument reads the variable
+    if int(root_window.tk.call('set','check_1')) == 0:
+      root_window.tk.call('grid','forget','.pane.top.tabs.fmanual.axes.axisu')
+      root_window.tk.call('grid','forget','.pane.top.tabs.fmanual.axes.axisv')
+    else :
+      root_window.tk.call('grid','configure','.pane.top.tabs.fmanual.axes.axisu')
+      root_window.tk.call('grid','configure','.pane.top.tabs.fmanual.axes.axisv')
+      root_window.tk.call('grid','.pane.top.tabs.fmanual.axes.axisu','-column','0','-row','2','-columnspan','3','-padx','4','-sticky','w')
+      root_window.tk.call('grid','.pane.top.tabs.fmanual.axes.axisv','-column','2','-row','2','-columnspan','3','-padx','4','-sticky','w')
+    
+def disableATClpSensorsButton_clicked() :
+    # Tcl's [set] with only one argument reads the variable
+    if int(root_window.tk.call('set','check_2')) == 1:
+      axisui_atc['disable_lp_sensors']=True     
+    else :
+      axisui_atc['disable_lp_sensors']=False
+
+def disableWaysLubeButton_clicked() :
+    # Tcl's [set] with only one argument reads the variable
+    if int(root_window.tk.call('set','check_3')) == 1:
+      axisui_ways_lube['disable']=True     
+    else :
+      axisui_ways_lube['disable']=False     
+
+def runWaysLubeButton_clicked() :
+    axisui_ways_lube['run_cycle']=True     
+
+def machineLightsButton_clicked() :
+    if machine_lights['lights_on'] :
+      machine_lights['lights_on']=False     
+    else:
+      machine_lights['lights_on']=True     
+
+# any function called from tcl needs to be added to TclCommands
+
+TclCommands.showUVAxisCheckButton_clicked     = showUVAxisCheckButton_clicked
+TclCommands.disableATClpSensorsButton_clicked = disableATClpSensorsButton_clicked
+TclCommands.disableWaysLubeButton_clicked     = disableWaysLubeButton_clicked
+TclCommands.runWaysLubeButton_clicked         = runWaysLubeButton_clicked
+TclCommands.machineLightsButton_clicked       = machineLightsButton_clicked
+commands = TclCommands(root_window)

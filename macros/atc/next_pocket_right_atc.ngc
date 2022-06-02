@@ -1,0 +1,23 @@
+o<next_pocket_right_atc> sub
+
+; atc specs
+#<right_positions> = [#<_ini[atc]right_pockets>]    ; right atc pockets
+#<right_deg_pos>   = [360/#<right_positions>]
+
+#<current_positioned_pocket>=[round[#<_v>/#<right_deg_pos>]+1]
+
+;(debug,  next pocket=#<drop_in_pocket> v=#<_v> curr pkt pos= #<current_positioned_pocket>)
+#<current_adj_positioned_pocket>=#<current_positioned_pocket>
+o1911 while [#<current_adj_positioned_pocket> gt #<right_positions>]
+  #<current_adj_positioned_pocket>=[#<current_adj_positioned_pocket>-#<right_positions>] 
+  ;(debug, adjusted curr pkt pos= #<current_adj_positioned_pocket>)
+o1911 endwhile 
+
+#<distance>=1
+     
+(DEBUG, EVAL[vcp.getWidget{"dynatc_right"}.rotate{1, "cw"}])
+g53 g0 v[[#<current_positioned_pocket>+#<distance>-1]*#<right_deg_pos>]
+
+;(debug, atc_end final)
+o<next_pocket_right_atc> endsub [1]
+m2

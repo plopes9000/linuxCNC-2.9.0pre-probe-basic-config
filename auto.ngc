@@ -1,0 +1,9 @@
+(ngcgui: FEATURE 210219:16.31.34)
+(ngcgui: files: < macros/probe/p-calibrate.ngc >)
+(ngcgui: feature line added) #<_feature:> = 0
+(ngcgui: remaining_features line added) #<_remaining_features:> = 0
+(ngcgui: call subroutine file: macros/probe/p-calibrate.ngc)
+(ngcgui: positional parameters:)
+(         #1 =    diam_hole =       40.033)
+o<p-calibrate> call [40.033]
+(ngcgui: m2 line added) m2 (g54 activated)

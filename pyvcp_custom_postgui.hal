@@ -1,0 +1,44 @@
+# Include your custom_postgui HAL commands here
+# This file will not be overwritten when you run PNCconf again
+
+net my-reset-amps hm2_5i25.0.7i76.0.0.output-01 <= pyvcp.reset-amplifiers
+net ipm-out pyvcp.feed-rate <= mult2.0.out
+net my-temp1 pyvcp.temp1 <= lcec.0.PT100AIN3.pot-0-val
+net my-temp2 pyvcp.temp2 <= lcec.0.PT100AIN3.pot-1-val
+net my-temp3 pyvcp.temp3 <= lcec.0.PT100AIN3.pot-2-val
+net my-temp4 pyvcp.temp4 <= lcec.0.PT100AIN3.pot-3-val
+
+setp lcec.0.AOUT1.aout-0-enable 1
+setp lcec.0.AOUT1.aout-0-scale 100
+net my-spindle-torque-out pyvcp.spindle-torque-out-f <= lcec.0.AOUT1.aout-0-value
+
+setp lcec.0.AIN1.ain-0-scale 100
+setp lcec.0.AIN1.ain-1-scale 100
+setp lcec.0.AIN2.ain-0-scale 100
+setp lcec.0.AIN2.ain-1-scale 100
+net my-spindle-torque pyvcp.spindle-torque <= lcec.0.AIN1.ain-0-val
+net my-x-torque pyvcp.x-torque <= lcec.0.AIN1.ain-1-val
+net my-y-torque pyvcp.y-torque <= lcec.0.AIN2.ain-0-val
+net my-z-torque pyvcp.z-torque <= lcec.0.AIN2.ain-1-val
+net my-a-torque pyvcp.a-torque
+net my-b-torque pyvcp.b-torque
+
+
+net probe-error => pyvcp.probe-error
+net probe-battery => pyvcp.probe-battery
+net probe-in => pyvcp.probe-in
+
+net probe-start <=  pyvcp.probe-start
+net probe-inspection-select <=  pyvcp.probe-inspection-select
+
+net mytoolnumber iocontrol.0.tool-number => pyvcp.tool-number
+
+#net spindle-fb-filtered-abs-rpm       =>   pyvcp.spindle-speed
+net spindle-vel-cmd-rpm-abs       =>   pyvcp.set-spindle-speed
+net spindle-at-speed        =>    pyvcp.spindle-at-speed-led
+net spindle-fb-filtered-abs-rpm => pyvcp.spindle-rpm
+# **** Setup of spindle speed display using pyvcp -END ****
+
+net tc-changed classicladder.0.out-00 => pyvcp.py-tc-changed
+net tc-error classicladder.0.out-04 => pyvcp.py-tc-error
+

@@ -1,0 +1,113 @@
+sudo ethercat -p8 states INIT; sleep 1
+sudo ethercat -p8 slaves -v | grep State
+
+sudo ethercat -p8 states PREOP; sleep 1
+sudo ethercat -p8 slaves -v | grep State; sleep 1
+
+if [[ 1 -eq 1 ]]; then
+  sudo ethercat -p8 --type uint8 download 0xf002 0x01 0x02    # 1Mbit baudrate 
+  sudo ethercat -p8 --type uint8 upload 0xf002 0x02    # can slaves
+  sleep 40
+  sudo ethercat -p8 --type uint8 upload 0xf002 0x02  # can slaves
+  sudo ethercat -p8 --type uint8 upload 0x9000 0x00  # detected canopen identification node
+  sudo ethercat -p8 --type uint16 upload 0x9000 0x01 # node addr
+  sudo ethercat -p8 --type string upload 0x9000 0x02 # device name
+  sudo ethercat -p8 --type uint32 upload 0x9000 0x04 # device type
+  sudo ethercat -p8 --type uint32 upload 0x9000 0x05 # vendor id
+  sudo ethercat -p8 --type uint32 upload 0x9000 0x06 # product
+  sudo ethercat -p8 --type uint32 upload 0x9000 0x07 # revision
+  sudo ethercat -p8 --type uint32 upload 0x9000 0x08 # serial
+  
+  sudo ethercat -p8 --type uint8 upload 0x9006 0x00 # detected TxPDO configuration node
+  sudo ethercat -p8 --type octet_string upload 0x9006 0x01 | hexdump # CAN TxPDO 1
+   # 0181 0000 02ff 0002 0000 0000
+  sudo ethercat -p8 --type octet_string upload 0x9006 0x02 | hexdump # CAN TxPDO 2
+   # 0281 0000 08ff 0002 0000 0000
+  sudo ethercat -p8 --type octet_string upload 0x9006 0x03 | hexdump # CAN TxPDO 3
+   # 0381 0000 08ff 0002 0000 0000
+  sudo ethercat -p8 --type octet_string upload 0x9006 0x04 | hexdump # CAN TxPDO 4
+   # 0481 0000 00ff 0003 0000 0000
+  
+  sudo ethercat -p8 --type uint8 upload 0x9008 0x00 # detected TxPDO configuration node
+  sudo ethercat -p8 --type octet_string upload 0x9008 0x01 | hexdump # CAN RxPDO 1
+   # 0201 0000 02ff 0000 0000 0000
+  sudo ethercat -p8 --type octet_string upload 0x9008 0x02 | hexdump # CAN RxPDO 2
+   # 0301 0000 08ff 0000 0000 0000
+  sudo ethercat -p8 --type octet_string upload 0x9008 0x03 | hexdump # CAN RxPDO 3
+   # 0401 0000 06ff 0000 0000 0000
+  sudo ethercat -p8 --type octet_string upload 0x9008 0x04 | hexdump # CAN RxPDO 4
+   # 0501 0000 00ff 0000 0000 0000
+
+
+	# save scan in backup
+	#sudo ethercat -p8 --type uint32 download 0x1010 0x01 0x65766173
+	#sudo ethercat -p8 --type uint32 download 0x1011 0x01 0x64616F6C
+else
+  echo "1c32"
+  sudo ethercat -p8 --type uint32 download 0x1c32 0x02 0x003D0900  # cycle time in ns
+  echo "1c33"
+  sudo ethercat -p8 --type uint32 download 0x1c33 0x03 0x00249F00  # 
+  
+  echo "F800"
+  echo "117F028000A00F000000000000001E640000000000000000000000000000000000000000000000000000000000"  | xxd -r  -p -c 256 | sudo ethercat -p8  download -t octet_string 0xF800 0x0 -
+  echo "8000"
+  echo 2E000100920102006A000000000000000000000000000000000000000000000000000000640003000000D00705000A0000000000000000000000000000000000000000000000000000000000  | xxd -r  -p | sudo ethercat -p8  download -t octet_string 0x8000 -
+  echo "0x8006"
+  echo 030081010000FF0200000000000081020000FF0800000000000081030000FF08000000000000 | xxd -r  -p | sudo ethercat -p8  download -t octet_string 0x8006 -
+  echo "0x8008"
+  echo 030001020000FF0200000000000001030000FF0800000000000001040000FF06000000000000  | xxd -r  -p | sudo ethercat -p8  download -t octet_string 0x8008 -
+  echo "0x8003"
+  echo 0C000018010400810100000018020100FF0118010400810200000118020100FF0218010400810300000218020100FF0014010400010200000014020100FF0114010400010300000114020100FF0214010400010400000214020100FF  | xxd -r  -p | sudo ethercat -p8  download -t octet_string 0x8003 -
+  echo "0x1C12"
+  echo 01000016 | xxd -r  -p | sudo ethercat -p8  download -t octet_string 0x1C12 -
+  echo "0x1C13"
+  echo 0500001A811A821A831A841A | xxd -r  -p | sudo ethercat -p8  download -t octet_string 0x1C13 -
+
+  sudo ethercat -p8 --type uint32 upload 0x1c32 0x02
+  sudo ethercat -p8 --type uint32 upload 0x1c33 0x03
+  sudo ethercat -p8 --type uint8  upload 0xf800 0x02 
+  sudo ethercat -p8 --type uint8  upload 0x8000 0x00 # 
+  sudo ethercat -p8 --type uint16 upload 0x8000 0x01 # node address
+  sudo ethercat -p8 --type uint32 upload 0x8000 0x04 # device type
+  sudo ethercat -p8 --type uint32 upload 0x8000 0x05 # vendor id
+  sudo ethercat -p8 --type uint32 upload 0x8000 0x06 # product code 0x00000014
+  sudo ethercat -p8 --type uint32 upload 0x8000 0x07 # revision 0x02ba0166
+  sudo ethercat -p8 --type uint32 upload 0x8000 0x08 # serial number 0x2b865774
+  sudo ethercat -p8 --type uint16 upload 0x8000 0x20 # flags - bit 6 disable checking of 0x1000 
+
+  
+  echo "8006"
+#  sudo ethercat -p8 --type uint8        download 0x8006 0x00 0x04 # TxPDO configuration node
+#  sudo ethercat -p8 --type octet_string download 0x8006 0x01 0x0181000002ff000200000000 # CAN TxPDO 1 
+#  sudo ethercat -p8 --type octet_string download 0x8006 0x02 0x0281000008ff000200000000 # CAN TxPDO 2
+#  sudo ethercat -p8 --type octet_string download 0x8006 0x03 0x0381000008ff000200000000 # CAN TxPDO 3
+#  sudo ethercat -p8 --type octet_string download 0x8006 0x04 0x0481000000ff000300000000 # CAN TxPDO 4
+  
+  echo "8008"
+#  sudo ethercat -p8 --type uint8        download 0x8008 0x00 0x04 # RxPDO configuration node
+#  sudo ethercat -p8 --type octet_string download 0x8008 0x01 0x0201000002ff000000000000 # CAN RxPDO 1
+#  sudo ethercat -p8 --type octet_string download 0x8008 0x02 0x0301000008ff000000000000 # CAN RxPDO 2
+#  sudo ethercat -p8 --type octet_string download 0x8008 0x03 0x0401000006ff000000000000 # CAN RxPDO 3
+#  sudo ethercat -p8 --type octet_string download 0x8008 0x04 0x0501000000ff000000000000 # CAN RxPDO 4
+  
+  
+  #sudo ethercat -p8 --type uint8 download 0x8003 0x00 0x01 # CAN SDO init Cmds
+  #sudo ethercat -p8 --type octet_string download 0x8003 0x01 0x # CAN SDO init cmds
+
+#  sudo ethercat -p8 states SAFEOP; sleep 1
+#  sudo ethercat -p8 slaves -v | grep State
+  
+#  sudo ethercat -p8 states OP; sleep 1
+#  sudo ethercat -p8 slaves -v | grep State
+  
+  #Erzeugen des Backup Parameter Storage
+  #Das Backup Parameter Storage kann wie folgt erzeugt werden:
+  #1. Download des Objekts 0x10F2 (in PREOP, SAFEOP oder OP): In diesem Fall werden die empfangenen Daten als Backup Parameter Storage im Flash gespeichert
+  #2. Scannen des CAN Busses und anschließendes Beschreiben des Entries 0x1010:01 mit dem Wert 0x65766173: Hierbei erzeugt die EL6751 selbständig aus den InfoData 0x9yy0, 0x9yy8 und 0x9yyA das Backup Parameter Storage und speichert es im Flash.
+  #In beiden Fällen wird nach 5 s ein automatischer Reboot der EL6751 vorgenommen (geht zurück nach INIT mit dem AL-Status Code 0x60). Weiterhin werden alle SDO-Downloads der Objekte 0xF800 oder 0x8yyz abgelehnt.
+  #Löschen des Backup Parameter Storage
+  #Um ein neues Backup Parameter Storage zu laden oder das vorhandene einfach nur zu löschen, ist der Entry 0x1011:01 mit dem Wert 0x64616F6C zu beschreiben.
+
+fi
+
+

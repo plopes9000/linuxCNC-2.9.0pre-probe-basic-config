@@ -1,0 +1,6 @@
+#!/bin/bash
+#voltage=$1
+#feedrate=$2
+halcmd setp probe.start.or.in0 1
+halcmd setp probe.start.or.in0 0
+exit

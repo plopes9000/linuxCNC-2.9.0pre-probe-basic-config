@@ -1,0 +1,28 @@
+o<on_abort> sub
+
+; if say a G38 probe was interrupted during a remap, this leaves the G38 modal state active
+; clear it out here, and any other state you what to have established after an error
+;
+; executing an M2 here is NOT recommended here, so we replicate the steps taken by an M2
+; but keep executing 
+
+(print, on_abort executing)
+
+G90 (absolute)
+G40 (cutter compensation off)
+; G49 (tool offset off)
+
+M5  (spindle off)
+#<unclamp_tool>     = 12    ; motion.digital-out-xx
+#<clamp_tool>       = 13    ; motion.digital-out-xx
+m65 p #<unclamp_tool>       ; reset clamp tool
+m65 p #<clamp_tool>         ; reset clamp tool
+
+
+; M2 sets G1, but  this fails with feed zero
+; a G80 is the next best safe thing
+G80 (cancel modal motion)
+M9  (mist and coolant off)
+
+o<on_abort> endsub
+m2

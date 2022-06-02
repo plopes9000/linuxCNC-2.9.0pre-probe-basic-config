@@ -1,0 +1,92 @@
+;#############################
+; probe x,y pos and an angle
+o<aux-probe-at-angle-args> sub
+#<angle>=#1
+#<distance>=#2
+#<backoff>=#3
+#<fine_feed>=#4
+#<search_feed>=#5
+#<rapid_feed>=#6
+
+#<diam_ball>=#<_ini[PROBE]BALL_DIAMETER>
+#<probe_tool_number>=#<_ini[PROBE]TOOL_NUMBER>
+ 
+;(debug, aux_probe-at-angle-args)
+
+M5 (Stop spindle)
+o<pcheck1> if [ #5400 NE #<probe_tool_number> ]
+  (abort, Please load probe - T#<probe_tool_number> M6)
+  o<aux-probe-at-angle-args> endsub [-1]
+o<pcheck1> endif
+
+m66 P0 l0 (check if probe did activate)
+o292 if [#5399 eq 1]
+  (abort, probe not activated)
+  o<aux-probe-at-angle-args> endsub [-1]
+o292 endif
+
+#<initial_x>=#<_x>
+#<initial_y>=#<_y>
+#<initial_z>=#<_z>
+
+o<probe-off-301-if> if [#<distance> LT #<backoff> ]
+  (abort, distance smaller than backoff value, can not make move, distance #<distance>, backoff #<backoff>)
+  o<aux-probe-at-angle-args> endsub [-1]
+o<probe-off-301-if> endif
+
+#<offset_variable>=[fix[#<angle>/45]]
+o<probe-off-302-if> if [ [#<offset_variable> NE [#<angle>/45]] or [#<offset_variable> LT 0 or #<offset_variable> GT 8] ]
+  (abort, angle not in calibration #<angle>)
+  o<aux-probe-at-angle-args> endsub [-1]
+o<probe-off-302-if> endif
+
+#<probe_offset>=#[421+#<offset_variable>]
+o<probe-off-303-if> if [[#<probe_offset> EQ 0] or [#<probe_offset> GT [1] ] or [#<probe_offset> LT [-1] ]  ]
+  (abort, probe has not been calibrated for the angle #<angle>, off number #<offset_variable> [421+#<offset_variable>] )
+  o<aux-probe-at-angle-args> endsub [-1]
+o<probe-off-303-if> endif
+
+;(debug, offset_variable=#<offset_variable>, offset=#<probe_offset>)
+
+#<sin_a>=sin[#<angle>]
+#<cos_a>=cos[#<angle>]
+#<y_pos_b> =[#<sin_a>*#<distance>]
+#<x_pos_b> =[#<cos_a>*#<distance>]
+#<y_backoff> =[#<sin_a>*#<backoff>]
+#<x_backoff> =[#<cos_a>*#<backoff>]
+#<y_backoff2> =[#<sin_a>*[#<backoff>+0.3]]
+#<x_backoff2> =[#<cos_a>*[#<backoff>+0.3]]
+#<y_comp> =[#<sin_a>*#<probe_offset>]
+#<x_comp> =[#<cos_a>*#<probe_offset>]
+g91 g38.3 x[#<x_pos_b>] y[#<y_pos_b>] f#<search_feed>
+#<x_touch>=#5420
+o100 if [ #5070 eq 0 ]
+  g90 g0 x#<initial_x> y#<initial_y> f#<rapid_feed>
+  (msg, probe did not make contact ...)
+  o<aux-probe-at-angle-args> endsub [-1]
+o100 endif
+
+g91 g1 X[-#<x_backoff>] Y[-#<y_backoff>] f#<rapid_feed>
+
+g91 g38.3 X[#<x_backoff2>] Y[#<y_backoff2>] f#<fine_feed>
+#<y_touch>=#5421
+o200 if [ #5070 eq 0 ]
+  g90 g0 x#<initial_x> y#<initial_y> f#<rapid_feed>
+  (msg, probe did not make contact ...)
+  o<aux-probe-at-angle-args> endsub [-1]
+o200 endif
+#5001=[#<x_touch>+#<x_comp>]
+#5002=[#<y_touch>+#<y_comp>]
+
+M67 E0 Q#5001 (set hal analog output to x pos)
+M67 E1 Q#5002 (set hal analog output to x pos)
+
+;(debug, x=#<x_touch>, x-comp=#<x_comp> y=#<y_touch> y-comp=#<y_comp> )
+
+g90 g0 x#<initial_x> y#<initial_y> f#<rapid_feed>
+
+;(debug, probe-at-angle #<angle> with offset #<probe_offset>)
+
+
+o<aux-probe-at-angle-args> endsub [0]
+M2

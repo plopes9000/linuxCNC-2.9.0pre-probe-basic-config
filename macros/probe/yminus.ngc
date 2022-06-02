@@ -1,0 +1,7 @@
+o<yminus> sub
+
+o<aux-probe-at-angle-args> call [270] [#<_hal[probe.ps_probe_max]>] [#<_hal[probe.ps_probe_latch]>] [#<_hal[probe.ps_probevel]>] [#<_hal[probe.ps_searchvel]>] [#<_ini[TOOLSENSOR]RAPID_SPEED>]
+#<ret_code>=#<_value>
+g4 p0.5 ; dwell
+o<yminus> endsub [#<ret_code>]
+M2

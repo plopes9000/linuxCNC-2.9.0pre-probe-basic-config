@@ -1,0 +1,44 @@
+;#############################
+; index spindle at XX rpm, then position at zero degrees
+o<home-spindle> sub
+
+(stop the spindle)
+m5
+
+(force wait for spindle stop)
+G1 x[#<_x>+0.001] F2000
+G1 x[#<_x>-0.001] F2000
+G4 P2
+
+M66 P11 L0 ; check for left carousel out sensor
+O200 if [#5399 EQ 1]
+      (abort, homing spindle when an ATC is extended is not permited )
+O200 endif
+
+M66 P15 L0 ; check for right carousel out sensor
+O201 if [#5399 EQ 1]
+      (abort, homing spindle when an ATC is extended is not permited )
+O201 endif
+
+;just in case, grab tool to avoid spindle motion with drawbar pressed
+m10 
+
+
+; set spindle encoder to not homed, see hal - net spindle-homed <= motion.digital-out-01
+m64 p2
+; turn spindle at low speed, together with resetting spindle home, this will trigger the spindle to require the home position 
+S70 m3
+
+; dwell xx secs
+G4 P1
+
+; unset spindle encoder reset pin
+m65 p2
+
+; run orient
+M19 R0 P1
+
+
+;(debug,homing spindle finished)
+o<index_spindle> endsub
+M2

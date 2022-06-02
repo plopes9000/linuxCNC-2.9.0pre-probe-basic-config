@@ -1,0 +1,24 @@
+o<prev_pocket_left_atc> sub
+
+; atc specs
+#<left_positions> = [#<_ini[atc]left_pockets>]    ; left atc pockets
+#<left_deg_pos>   = [360/#<left_positions>]
+
+#<current_positioned_pocket>=[round[#<_u>/#<left_deg_pos>]+1]
+
+;(debug,  pocket=#<drop_in_pocket> u=#<_u> curr pkt pos= #<current_positioned_pocket>)
+#<current_adj_positioned_pocket>=#<current_positioned_pocket>
+o1911 while [#<current_adj_positioned_pocket> gt #<left_positions>]
+  #<current_adj_positioned_pocket>=[#<current_adj_positioned_pocket>-#<left_positions>] 
+  ;(debug, adjusted curr pkt pos= #<current_adj_positioned_pocket>)
+o1911 endwhile 
+
+#<distance>=-1
+     
+(tells the atc widget how many steps to move and start moving forward)
+(DEBUG, EVAL[vcp.getWidget{"dynatc_left"}.rotate{1, "ccw"}])
+g53 g0 u[[#<current_positioned_pocket>+#<distance>-1]*#<left_deg_pos>]
+
+;(debug, atc_end final)
+o<prev_pocket_left_atc> endsub [1]
+m2

@@ -1,0 +1,12 @@
+o<retract_left_atc> sub
+
+M65 P10 ; Turn off move out carousel, to move it back home
+
+M66 P10 L3 Q5 ;check carousel in position sensor
+   O100 if [#5399 LT 0]
+      (abort, failed to send left carousel home)
+   O100 endif
+
+o<retract_left_atc> endsub [1]
+
+M2

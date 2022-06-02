@@ -1,0 +1,32 @@
+;#############################
+; grab tool in spindle
+o<drawbar_grab_tool> sub
+
+#<unclamp_tool>         = 12    ; motion.digital-out-xx
+#<clamp_tool>           = 13    ; motion.digital-out-xx
+#<is_unclamped>         = 19    ; motion.digital-in-xx
+#<is_clamped>           = 18    ; motion.digital-in-xx
+#<is_drawbar_valid_pos> = 21    ; motion.digital-in-xx
+
+m66 p[#<is_clamped>] l0 ; check if its already clamped
+o100 if [#5399 eq 1]
+    o<drawbar_grab_tool> endsub
+o100 endif
+
+m64 p[#<clamp_tool>] ; clamp tool
+m66 p[#<is_clamped>] l3 q5 ; wait for tool clamp = true
+o101 if [#5399 lt 0]
+    m65 p #<clamp_tool> ; reset clamp tool
+    (abort, failed to clamp tool)
+o101 endif
+
+m66 p[#<is_drawbar_valid_pos>] l0 ; wait for tool clamp = true
+o102 if [#5399 eq 0]
+    m65 p #<clamp_tool> ; reset clamp tool
+    (abort, failed to clamp tool, is the tool only partially clampped)
+o102 endif
+
+m65 p #<clamp_tool> ; reset clamp tool
+
+o<drawbar_grab_tool> endsub
+M2

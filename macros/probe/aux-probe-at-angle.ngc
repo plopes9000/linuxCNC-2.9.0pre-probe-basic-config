@@ -1,0 +1,16 @@
+;#############################
+; probe x,y pos and an angle
+o<aux-probe-at-angle> sub
+#<angle>=#1
+#<distance>=#2
+#<backoff>=#<_ini[PROBE]BACKOFF>
+#<rapid_feed>=#<_ini[PROBE]RAPID_FEED>
+#<search_feed>=#<_ini[PROBE]COARSE_FEED>
+#<fine_feed>=#<_ini[PROBE]FINE_FEED>
+
+call o<aux-probe-at-angle-args> [#1] [#2] [#<backoff>] [#<fine_feed>] [#<search_feed>] [#<rapid_feed>]
+o100 if [ #<_value> == -1 ]
+  (abort, failed to probe ....)
+o100 endif 
+
+o<aux-probe-at-angle> endsub [#<_value>]

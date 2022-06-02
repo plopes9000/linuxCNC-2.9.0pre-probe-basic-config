@@ -1,0 +1,15 @@
+o<bind_spindle_tool_to_atc> sub
+#<parameter_store_tool_in_spindle>        = [#<_ini[atc]var_tool_in_spindle>] ; relies on 4090 to be manually created in linuxcnc.var file
+#<parameter_store_tool_in_spindle_auto>   = [#<_ini[atc]var_tool_in_spindle_atc_bound>] ; relies on 4091 to be manually created in linuxcnc.var file
+
+o100 if [#[#<parameter_store_tool_in_spindle>] gt 0]
+  #[#<parameter_store_tool_in_spindle_auto>] = 1
+  #<tool_in_spndle>=#[#<parameter_store_tool_in_spindle>]
+  ;(debug, tool #<tool_in_spndle> bound to ATC)
+o100 else
+  (abort, No tool registered to be in the spindle, please use T<number> M6 first)
+o100 endif
+
+
+o<bind_spindle_tool_to_atc> endsub [1]
+m2

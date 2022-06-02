@@ -1,0 +1,10 @@
+o<xplus> sub
+
+
+o<aux-probe-at-angle-args> call [0] [#<_hal[probe.ps_probe_max]>] [#<_hal[probe.ps_probe_latch]>] [#<_hal[probe.ps_probevel]>] [#<_hal[probe.ps_searchvel]>] [#<_ini[TOOLSENSOR]RAPID_SPEED>]
+#<ret_code>=#<_value>
+;(debug, probe X=#5001 ret=#<ret_code>)
+
+g4 p0.5 ; dwell
+	
+o<xplus> endsub [#<ret_code>]

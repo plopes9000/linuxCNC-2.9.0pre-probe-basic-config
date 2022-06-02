@@ -1,0 +1,155 @@
+
+# delayed home
+unlinkp xhc-hb04.button-home
+net home-button xhc-hb04.button-home => debounce.0.0.in
+net pendant:home <= debounce.0.0.out 
+
+# delayed start/pause
+unlinkp xhc-hb04.button-start-pause
+net start-button xhc-hb04.button-start-pause => debounce.0.1.in
+net pendant:start-or-pause => debounce.0.1.out
+
+
+net tog_mode xhc-hb04.button-mode => toggle_mode.in 
+net tog_mode_out toggle_mode.out => toggle2nist_mode.in
+net is_mode_mdi                     toggle2nist_mode.is-on
+
+net flip_to_mdi toggle2nist_mode.on => halui.mode.mdi
+net flip_to_manual toggle2nist_mode.off => halui.mode.manual
+
+unlinkp xhc-hb04.button-macro-1
+#plpb net mpg-clear-notifications xhc-hb04.button-macro-1 => axisui.notifications-clear
+
+
+
+## tool change
+net tc-is-up classicladder.0.in-02
+net tc-is-down classicladder.0.in-03
+net spindle-on classicladder.0.in-04
+
+#net tc-down classicladder.0.out-02 => hm2_5i25.0.7i76.0.0.output-10
+#net tc-up classicladder.0.out-03 => hm2_5i25.0.7i76.0.0.output-15
+net tc-act-down   classicladder.0.out-02 => lcec.1.EL6731.IL2301.valve5_high
+net tc-act-up     classicladder.0.out-03 => lcec.1.EL6731.IL2301.valve5_low
+net tc-in-prog                           <= classicladder.0.out-05
+net tc-error                             <= classicladder.0.out-04
+net tc-changed                           <= classicladder.0.out-00
+
+
+net tc-in-prog spindle-inhibit-logic.in-00 
+net tc-error   spindle-inhibit-logic.in-01
+net spindle-inhibit-out spindle-inhibit-logic.or => spindle.0.inhibit
+#plpb net probe-x-touchoff => probe.x-touchoff <= motion.analog-out-00
+#plpbnet probe-y-touchoff => probe.y-touchoff <= motion.analog-out-01
+#plpbnet probe-z-touchoff => probe.z-touchoff <= motion.analog-out-02
+
+
+net axisui_ways_lube_run_cycle qtpyvcp.halbutton-run-lube-cycle.out   =>  WaysLube.run-one-cycle
+net axisui_ways_lube_disable   qtpyvcp.halbutton-dis-ways-lube-cycle.checked  =>  WaysLube.disable-cycle
+net axisui_atc_disable_lp_sensors  qtpyvcp.halbutton-dis-atc-lp-sensors.checked
+net axisui_atc_disable_lp_sensors  atc-left-lift-up-not.or.in1 
+net axisui_atc_disable_lp_sensors  atc-left-push-down-not.or.in1 
+net axisui_atc_disable_lp_sensors  atc-right-lift-up-not.or.in1 
+net axisui_atc_disable_lp_sensors  atc-right-push-down-not.or.in1 
+net machine_lights_lights_on qtpyvcp.halbutton-machine-lights.checked  =>  machine-lights.or.in1
+
+
+
+########################
+# amp torque
+########################
+net my-set-spindle-torque-out qtpyvcp.halslider-spindle-torque.out-f => lcec.1.EL6751-CanOpen.sp-set-current
+
+net my-spindle-torque qtpyvcp.spindle-load-indicator.in-f <= sp-torque.abs.out
+net my-spindle-torque-abs-out sp-torque.abs.in <= lcec.1.EL6751-CanOpen.sp-torque
+
+net my-x-torque qtpyvcp.halbarindicator-x-tq.in-f <= x-torque.abs.out
+net my-x-torque-abs-in x-torque.abs.in <= lcec.1.EL6751-CanOpen.x-torque 
+
+net my-y-torque qtpyvcp.halbarindicator-y-tq.in-f <= y-torque.abs.out
+net my-y-torque-abs-in y-torque.abs.in  <= lcec.1.EL6751-CanOpen.y-torque
+
+net my-z-torque qtpyvcp.halbarindicator-z-tq.in-f  <= z-torque.abs.out
+net my-z-torque-abs-in z-torque.abs.in  <= lcec.1.EL6751-CanOpen.z-torque 
+
+net my-a-torque qtpyvcp.halbarindicator-a-tq.in-f  <= a-torque.abs.out
+net my-a-torque-abs-in a-torque.abs.in   <= lcec.1.EL6751-CanOpen.a-torque
+
+net my-c-torque qtpyvcp.halbarindicator-c-tq.in-f  <= c-torque.abs.out
+net my-c-torque-abs-in c-torque.abs.in <= lcec.1.EL6751-CanOpen.c-torque
+
+net my-u-torque qtpyvcp.halbarindicator-u-tq.in-f  <= u-torque.abs.out
+net my-u-torque-abs-in u-torque.abs.in <= lcec.1.EL6751-CanOpen.u-torque
+
+net my-v-torque qtpyvcp.halbarindicator-v-tq.in-f  <= v-torque.abs.out
+net my-v-torque-abs-in v-torque.abs.in <= lcec.1.EL6751-CanOpen.v-torque
+
+#######################
+# spindle temperature
+#######################
+net my-hal_electrical_cab_temp  qtpyvcp.halbarindicator-eletrical-cab.in-f  <= lcec.0.PT100AIN3.pot-0-val
+net my-hal_spindle_motor_top_temp  qtpyvcp.halbarindicator-motor-top.in-f      <= lcec.1.EL6731.IL2301.temp2
+net my-hal_spindle_motor_bott_temp qtpyvcp.halbarindicator-motor-bottom.in-f   <= lcec.1.EL6731.IL2301.temp3 
+net my-hal_spindle_top_temp        qtpyvcp.halbarindicator-spindle-top.in-f    <= lcec.1.EL6731.IL2301.temp1
+net my-hal_spindle_bott_temp       qtpyvcp.halbarindicator-spindle-bottom.in-f <= lcec.1.EL6731.IL2301.temp4
+
+
+########################
+# amp op status and reset
+########################
+net my-reset-amps hm2_5i25.0.7i76.0.0.output-01 <= qtpyvcp.halbutton-reset-amps.out
+
+#net my-reset-sp-amp        qtpyvcp.halbutton-spndl-amp-st.out => lcec.1.EL6751-CanOpen.sp-ctrl-FaultReset
+#net my-hal-spindle-amp-op  qtpyvcp.halledind-spindle-op.on    <= lcec.1.EL6751-CanOpen.sp-st-OpEnabled
+#net spindle-amp-fault      qtpyvcp.halledind-spindle-op.flash 
+
+net my-hal-x-amp-op 			qtpyvcp.halledind-x-amp-op.on 			<= lcec.1.EL6751-CanOpen.x-st-OpEnabled
+net x-amp-fault 			    qtpyvcp.halledind-x-amp-op.error
+net x-amp-fault           qtpyvcp.halbutton-x-amp-reset.enable
+
+net my-hal-y-amp-op 			qtpyvcp.halledind-y-amp-op.on 			<= lcec.1.EL6751-CanOpen.y-st-OpEnabled
+net y-amp-fault           qtpyvcp.halledind-y-amp-op.error
+net y-amp-fault           qtpyvcp.halbutton-y-amp-reset.enable
+
+net mz-hal-z-amp-op 			qtpyvcp.halledind-z-amp-op.on 			<= lcec.1.EL6751-CanOpen.z-st-OpEnabled
+net z-amp-fault           qtpyvcp.halledind-z-amp-op.error
+net z-amp-fault           qtpyvcp.halbutton-z-amp-reset.enable
+
+net ma-hal-a-amp-op 			qtpyvcp.halledind-a-amp-op.on 			<= lcec.1.EL6751-CanOpen.a-st-OpEnabled
+net a-amp-fault           qtpyvcp.halledind-a-amp-op.error
+net a-amp-fault           qtpyvcp.halbutton-a-amp-reset.enable
+
+net mc-hal-c-amp-op 			qtpyvcp.halledind-c-amp-op.on 			<= lcec.1.EL6751-CanOpen.c-st-OpEnabled
+net c-amp-fault           qtpyvcp.halledind-c-amp-op.error
+net c-amp-fault           qtpyvcp.halbutton-c-amp-reset.enable
+
+net mu-hal-u-amp-op 			qtpyvcp.halledind-u-amp-op.on 			<= lcec.1.EL6751-CanOpen.u-st-OpEnabled
+net u-amp-fault           qtpyvcp.halledind-u-amp-op.error
+net u-amp-fault           qtpyvcp.halbutton-u-amp-reset.enable
+
+net mv-hal-v-amp-op 			qtpyvcp.halledind-v-amp-op.on 			<= lcec.1.EL6751-CanOpen.v-st-OpEnabled
+net v-amp-fault           qtpyvcp.halledind-v-amp-op.error
+net v-amp-fault           qtpyvcp.halbutton-v-amp-reset.enable
+
+#########################
+# amp warning / error
+#########################
+#net spindle-amp-fault =>  gladevcp.hal_spindle_amp_fault
+#net x-amp-fault 		  =>  gladevcp.hal_x_amp_fault
+#net y-amp-fault 	    => 	gladevcp.hal_y_amp_fault
+#net z-amp-fault 	  	=>  gladevcp.hal_z_amp_fault
+#net a-amp-fault 		  => 	gladevcp.hal_a_amp_fault
+#net c-amp-fault 		  => 	gladevcp.hal_c_amp_fault
+#net u-amp-fault 		  => 	gladevcp.hal_u_amp_fault
+#net v-amp-fault 		  => 	gladevcp.hal_v_amp_fault
+
+
+########################
+# spindle speed
+########################
+#net spindle-vel-cmd-rpm               => gladevcp.hal_spindle_speed_target
+#net spindle-at-speed                  => gladevcp.hal_spindle_at_speed
+#net spindle-speed => gladevcp.hal_spindle_speed
+
+# feed rate
+#net ipm-out gladevcp.hal_feed_rate <= mult2.0.out

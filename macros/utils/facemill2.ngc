@@ -1,0 +1,82 @@
+(Copyright - Igor Chudov, released under GNU Public License V3)
+O<facemill2> sub (facing a shallow rect. pocket)
+  #<x1>    = #1 (X minimum)
+  #<y1>    = #2 (Y minimum)
+  #<x2>    = #3 (X maximum)
+  #<y2>    = #4 (Y maximum)
+  #<depth> = #5 (milling depth, usu. neg.)
+  #<safez> = #6 (safe height to withdraw to)
+  #<frate> = #7 (milling rate)
+  #<diam>  = #8 (end mill diameter)
+  #<do_square> = #9 (Do square off)
+  #<ramp_entry> = #10
+
+  O100 if [#<frate> NE 0.0] 
+    F#<frate>
+  O100 endif
+
+  #<x1> = [#<x1> + #<diam>/2]
+  #<y1> = [#<y1> + #<diam>/2]
+  #<x2> = [#<x2> - #<diam>/2]
+  #<y2> = [#<y2> - #<diam>/2]
+
+  (Mill a square)
+  G0 Z#<safez>
+  G4 P0
+  G0 X#<x2> Y#<y1>
+  G4 P0
+
+  O<ramp_if> if [#<ramp_entry>]
+    O<if222> if [#<x2>-#<x1> LT #<y2> - #<y1>]
+      G1 Y#<y2> Z[ [#<safez>+#<depth>]/2 ]
+      Y#<y1>    Z#<depth>
+    O<if222> else
+      G1 X#<x1> Z[ [#<safez>+#<depth>]/2 ]
+      X#<x2>    Z#<depth>
+    O<if222> endif
+  O<ramp_if> else
+    G0 Z#<depth>
+  O<ramp_if> endif
+
+  #<nsteps> = [ ROUND [ [ #<y2> - #<y1> ]/[#<diam>/2] ] + 1] 
+  #<ystep>  = [ [#<y2>-#<y1>]/#<nsteps> ]
+
+  #<y> = #<y1>
+  O<while> while [1]
+
+
+    G1 X#<x1>
+    G0 Z#<safez>
+    G0 X#<x2>
+
+    #<y> = [#<y> + #<ystep>]
+    
+    O<ramp_if2> if [#<ramp_entry>]
+      O<if22> if [#<x2>-#<x1> LT #<y2> - #<y1>]
+        G1 Z[ [#<safez>+#<depth>]/2 ]
+      O<if22> else
+        G1 X#<x1> Z[ [#<safez>+#<depth>]/2 ]
+      O<if22> endif
+    O<ramp_if2> else
+      G0 Z#<depth>
+    O<ramp_if2> endif
+
+    O<if3> if [ #<y> LE #<y2> ]
+      G1 Y#<y>
+    O<if3> else
+      O<while> break
+    O<if3> endif
+
+  O<while> endwhile
+
+  O<if4> if [ #<do_square> ]
+    G0 X#<x1>
+    G1 Y#<y1>
+    G0 X#<x2> Y#<y1>
+  O<if4> endif
+
+
+  (Withdraw to safe height)
+  G0 Z#<safez>
+  G4 P0
+O<facemill2> endsub

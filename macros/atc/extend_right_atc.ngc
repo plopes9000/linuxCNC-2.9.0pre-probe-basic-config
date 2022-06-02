@@ -1,0 +1,32 @@
+o<extend_right_atc> sub
+
+
+M66 P11 L0 ; check for right carousel out sensor
+O200 if [#5399 EQ 1]
+      (abort, can not extend right side carousel if left side carousel is extended )
+O200 endif
+
+o300 if [EXISTS[#<q>]] ;
+o300 else ; skip z move if q(uiet) parameter is passed
+  g53 g1 z[#<_ini[axis_z]max_limit>] f[#<_ini[atc]z_coarse_feed>]
+o300 endif
+
+#<parameter_store_tool_in_spindle>      = 4900 ; relies on 4090 to be manually created in linuxcnc.var file
+#<is_tool_in_pocket>=17                        ; motion.digital-in-xx
+o400 if [#[#<parameter_store_tool_in_spindle>] ne 0]
+  m66 p[#<is_tool_in_pocket>] l0; check if there is a tool in carousel pocket
+  o401 if [#5399 eq 1]
+    (abort, can not extend carousel, tool detected in current pocket)
+  o401 endif
+o400 endif
+
+
+M64 P11 ; Move Right Carousel out
+M66 P15 L3 Q5 ; check for carousel out sensor
+   O100 if [#5399 LT 0]
+      (abort, failed to extend right atc)
+   O100 endif
+
+o<extend_right_atc> endsub [1]
+
+M2

@@ -1,0 +1,6 @@
+%
+#<probe_distance>=10
+o<aux-probe-at-angle> call [180] [#<probe_distance>]
+(debug,Spindle center is X=#5001,Y=#5002 from the edge)
+M2
+%

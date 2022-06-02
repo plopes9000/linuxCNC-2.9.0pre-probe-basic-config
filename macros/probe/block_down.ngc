@@ -1,0 +1,36 @@
+o<block_down> sub
+(cancel all Z offsets)
+G49
+G92.1
+G10 L20 P0  Z[#<_hal[axis.z.joint-pos-cmd]>]
+M65 P0 (activate probe input)
+G4 P1 (wait 1 sec for activation)
+
+#<probe_tool_number>=#<_ini[PROBE]TOOL_NUMBER>
+o<pcheck1> if [ #5400 NE #<probe_tool_number> ]
+  (abort, Please load probe - T#<probe_tool_number> M6)
+  o<down> endsub [-1]
+o<pcheck1> endif
+ 
+M5 (Stop spindle)
+M65 P0 (activate probe input)
+G4 P1 (wait 1 sec for activation)
+m66 P0 l0 (check if probe did activate)
+o292 if [#5399 eq 1]
+  (abort, probe not activated)
+  o<down> endsub [-1]
+o292 endif
+
+
+G91
+F #<_hal[auto_tool_measurement.searchvel]>
+(PROBEOPEN block_down.txt)
+G38.2 Z-5
+G0 Z0.26 (custom value)
+F #<_hal[auto_tool_measurement.probevel]>
+G38.2 Z-0.5 (custom value)
+(PROBECLOSE)
+G0 Z4
+G90
+o<block_down> endsub
+M2

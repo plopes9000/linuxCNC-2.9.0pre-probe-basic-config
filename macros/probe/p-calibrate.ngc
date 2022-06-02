@@ -1,0 +1,44 @@
+O<p-calibrate> sub (calibrate probe)
+#<diam_hole>=#1 (known hole diameter)
+
+#<diam_ball>=#<_ini[PROBE]BALL_DIAMETER>
+#<backoff>=#<_ini[PROBE]BACKOFF>
+#<coarse_feed>=#<_ini[PROBE]COARSE_FEED>
+#<fine_feed>=#<_ini[PROBE]FINE_FEED>
+#<probe_tool_number>=#<_ini[PROBE]TOOL_NUMBER>
+
+(info: MP12 3D probe calibration - known probe, known ring hole)
+
+o<p-start> call
+
+(debug, Ensure the diameters for ball and hole are precise and that the machine is in the exact center of the hole)
+
+; capture current position
+#<initial_x>=#5420
+#<initial_y>=#5421
+#<initial_z>=#5422
+g21 g17 g40 g80 g94 g90 g49 g92.1
+G0 x#<initial_x> y#<initial_y>
+g91 g38.5 z-0.00001 f#<fine_feed> (check that probe is active)
+
+
+;#####################################################################################
+;## Measure and store trigger points in 5021..28 for 0,45, 90,135, ... 315 degrees  ##
+;#####################################################################################
+#<angle-step>=45
+#<curr-angle>=0
+#<curr-step>=0
+o<base-angle-touches> do
+	o<aux-calibrate-probe-at-angle> call [#<curr-angle>] [#<diam_hole>] [#<diam_ball>] [#<coarse_feed>] [#<fine_feed>]
+	#[421+#<curr-step>]=#<_value>
+  ;(debug, probe-at-angle [421+#<curr-step>]= #<_value>)
+	g90 g0 x#<initial_x> y#<initial_y>
+        #<curr-step>=[#<curr-step>+1]
+	#<curr-angle>=[#<curr-angle>+#<angle-step>]
+o<base-angle-touches> while [ #<curr-angle> LT 360 ]
+
+g90 (absolute distance mode)
+g0 x#<initial_x> y#<initial_y>
+
+O<p-calibrate> endsub 
+

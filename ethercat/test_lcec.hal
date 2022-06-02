@@ -1,0 +1,9 @@
+# halrun -f test_lcec.hal -I
+
+loadusr -W lcec_conf /home/paju/linuxcnc/configs/zx7045-prod2.9.0pre/ethercat/el6752-ethercat-conf.xml
+loadrt lcec
+loadrt threads name1=fast fp1=0 period1=50000 name2=slow period2=1000000
+addf lcec.read-all fast
+addf lcec.write-all fast
+start
+show pin lcec.all-op

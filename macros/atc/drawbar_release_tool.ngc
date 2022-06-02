@@ -1,0 +1,27 @@
+;#############################
+; release tool in spindle
+o<drawbar_release_tool> sub
+
+#<unclamp_tool>         = 12    ; motion.digital-out-xx
+#<clamp_tool>           = 13    ; motion.digital-out-xx
+#<is_unclamped>         = 19    ; motion.digital-in-xx
+#<is_clamped>           = 18    ; motion.digital-in-xx
+#<is_drawbar_valid_pos> = 21    ; motion.digital-in-xx
+
+m66 p[#<is_unclamped>] l0 ; check if its already unclamped
+o100 if [#5399 eq 1]
+    m65 p[#<unclamp_tool>] ; reset clamp tool
+    o<drawbar_release_tool> endsub
+o100 endif
+
+m64 p[#<unclamp_tool>] ; clamp tool
+m66 p[#<is_unclamped>] l3 q5 ; wait for tool clamp = true
+o101 if [#5399 lt 0]
+    m65 p #<unclamp_tool> ; reset clamp tool
+    (abort, failed to release tool)
+o101 endif
+
+m65 p #<unclamp_tool> ; reset clamp tool
+
+o<drawbar_release_tool> endsub
+M2

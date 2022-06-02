@@ -1,0 +1,82 @@
+
+# Include your custom_postgui HAL commands here
+# This file will not be overwritten when you run PNCconf again
+
+net my-reset-amps hm2_5i25.0.7i76.0.0.output-01 <= gladevcp.hal_reset_amps
+#setp mult2.0.in0 60
+#net ipm-in  mult2.0.in1 <= motion.current-vel
+net ipm-out gladevcp.hal_feed_rate <= mult2.0.out
+
+
+########################
+# amp torque
+########################
+net my-set-spindle-torque-out gladevcp.hal_set_spindle_torque => lcec.1.EL6751-CanOpen.sp-set-current
+net my-spindle-torque gladevcp.hal_spindle_torque <= lcec.1.EL6751-CanOpen.sp-torque
+net my-x-torque gladevcp.hal_xtorque <= lcec.1.EL6751-CanOpen.x-torque 
+net my-y-torque gladevcp.hal_ytorque <= lcec.1.EL6751-CanOpen.y-torque 
+net my-z-torque gladevcp.hal_ztorque <= lcec.1.EL6751-CanOpen.z-torque 
+net my-a-torque gladevcp.hal_atorque <= lcec.1.EL6751-CanOpen.a-torque
+net my-c-torque gladevcp.hal_ctorque <= lcec.1.EL6751-CanOpen.c-torque
+net my-u-torque gladevcp.hal_utorque <= lcec.1.EL6751-CanOpen.u-torque
+net my-v-torque gladevcp.hal_vtorque <= lcec.1.EL6751-CanOpen.v-torque
+
+########################
+# amp op status
+########################
+net my-hal_spindle_amp_op gladevcp.hal_spindle_amp_op <= lcec.1.EL6751-CanOpen.sp-st-OpEnabled
+net my-hal_x_amp_op 			gladevcp.hal_x_amp_op 			<= lcec.1.EL6751-CanOpen.x-st-OpEnabled
+net my-hal_y_amp_op 			gladevcp.hal_y_amp_op 			<= lcec.1.EL6751-CanOpen.y-st-OpEnabled
+net my-hal_z_amp_op 			gladevcp.hal_z_amp_op 			<= lcec.1.EL6751-CanOpen.z-st-OpEnabled
+net my-hal_a_amp_op 			gladevcp.hal_a_amp_op 			<= lcec.1.EL6751-CanOpen.a-st-OpEnabled
+net my-hal_c_amp_op 			gladevcp.hal_c_amp_op 			<= lcec.1.EL6751-CanOpen.c-st-OpEnabled
+net my-hal_u_amp_op 			gladevcp.hal_u_amp_op 			<= lcec.1.EL6751-CanOpen.u-st-OpEnabled
+net my-hal_v_amp_op 			gladevcp.hal_v_amp_op 			<= lcec.1.EL6751-CanOpen.v-st-OpEnabled
+
+#########################
+# amp warning / error
+#########################
+net spindle-amp-fault =>  gladevcp.hal_spindle_amp_fault
+net x-amp-fault 		  =>  gladevcp.hal_x_amp_fault
+net y-amp-fault 	    => 	gladevcp.hal_y_amp_fault
+net z-amp-fault 	  	=>  gladevcp.hal_z_amp_fault
+net a-amp-fault 		  => 	gladevcp.hal_a_amp_fault
+net c-amp-fault 		  => 	gladevcp.hal_c_amp_fault
+net u-amp-fault 		  => 	gladevcp.hal_u_amp_fault
+net v-amp-fault 		  => 	gladevcp.hal_v_amp_fault
+
+
+#######################
+# spindle temperature
+#######################
+net my-hal_spindle_motor_top_temp  gladevcp.hal_spindle_motor_top_temp  <= lcec.1.EL6731.IL2301.temp2
+net my-hal_spindle_motor_bott_temp gladevcp.hal_spindle_motor_bott_temp <= lcec.1.EL6731.IL2301.temp3 
+net my-hal_spindle_top_temp        gladevcp.hal_spindle_top_temp        <= lcec.1.EL6731.IL2301.temp1
+net my-hal_spindle_bott_temp       gladevcp.hal_spindle_bott_temp       <= lcec.1.EL6731.IL2301.temp4
+
+
+########################
+# probe
+########################
+net probe-error    => gladevcp.hal_probe_error
+net probe-battery  => gladevcp.hal_probe_battery
+net probe-in       => gladevcp.hal_probe_status
+net probe-start    <= gladevcp.hal_probe_start
+net probe-inspection-select <=  gladevcp.hal_toolsetter_select
+
+########################
+# spindle speed
+########################
+net spindle-vel-cmd-rpm               => gladevcp.hal_spindle_speed_target
+net spindle-at-speed                  => gladevcp.hal_spindle_at_speed
+net spindle-speed => gladevcp.hal_spindle_speed
+
+########################
+# tool number / tool change
+########################
+net mytoolnumber iocontrol.0.tool-number => gladevcp.hal_tool_number
+net tc-changed => gladevcp.hal_tc_changed
+net tc-error   => gladevcp.hal_tc_error
+#net tc-in classicladder.0.in-00 <= gladevcp.hal_btn_tc_in
+#net tc-out classicladder.0.in-01 <= gladevcp.hal_btn_tc_out
+

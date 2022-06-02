@@ -1,0 +1,40 @@
+o<down> sub
+	
+O<down-if> IF [#<_hal[probe.set_zero]> EQ 5]
+    (cancel Z offsets)
+    G92.1
+    G49
+    G10 L20 P0 Z[#<_hal[axis.z.joint-pos-cmd]>]
+O<down-if> ENDIF 
+
+#<probe_tool_number>=#<_ini[PROBE]TOOL_NUMBER>
+o<pcheck1> if [ #5400 NE #<probe_tool_number> ]
+  (abort, Please load probe - T#<probe_tool_number> M6)
+  o<down> endsub [-1]
+o<pcheck1> endif
+ 
+M5 (Stop spindle)
+M65 P0 (activate probe input)
+G4 P1 (wait 1 sec for activation)
+m66 P0 l0 (check if probe did activate)
+o292 if [#5399 eq 1]
+  (abort, probe not activated)
+  o<down> endsub [-1]
+o292 endif
+
+ 
+#<z>=#<_z> (save current Z position)
+G91
+F #<_hal[probe.ps_searchvel]>
+G38.2 Z[-#<_hal[probe.ps_probe_max]>]
+g4 p0.5 ; dwell
+G1 Z[#<_hal[probe.ps_probe_latch]>] F#<_ini[TOOLSENSOR]RAPID_SPEED> 
+F #<_hal[probe.ps_probevel]>
+G4 P0.5 
+G38.2 Z[-#<_hal[probe.ps_probe_latch]>*2]
+G90
+(back to start point)
+G1 Z#<z> F#<_ini[TOOLSENSOR]RAPID_SPEED> 
+	
+o<down> endsub
+M2

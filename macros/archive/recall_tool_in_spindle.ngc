@@ -1,0 +1,13 @@
+o<recall_tool_in_spindle> sub
+
+#<parameter_store_tool_in_spindle> = 4900 ; relies on 4090 to be manually created in linuxcnc.var file
+
+o100 if [##<parameter_store_tool_in_spindle> eq 0]
+  m6 T0
+o100 else
+  m61 Q##<parameter_store_tool_in_spindle>
+  g43 h##<parameter_store_tool_in_spindle>
+o100 endif
+
+o<recall_tool_in_spindle> endsub
+m2

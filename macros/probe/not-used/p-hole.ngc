@@ -1,0 +1,56 @@
+o<p-hole> sub (find hole centre - taking into account calibrated data)
+#<max_diam>=#1 (max diameter)
+#<probe_distance>=[#<max_diam>/2]
+
+#####################
+## first round ######
+#####################
+o<aux-probe-at-angle> call [0] [#<probe_distance>]
+;(debug,X=#5001,Y=#5002)
+#<x1>=[#5420+#5001]
+o<aux-probe-at-angle> call [180] [#<probe_distance>]
+;(debug,X=#5001,Y=#5002)
+#<x2>=[#5420+#5001]
+#<adjustment>=[[#<x1>+#<x2>]/2]
+;(debug, x adjustment #<adjustment>)
+g91 g1x[-#<adjustment>]
+
+o<aux-probe-at-angle> call [90] [#<probe_distance>]
+;(debug,X=#5001,Y=#5002)
+#<y1>=[#5421+#5002]
+o<aux-probe-at-angle> call [270] [#<probe_distance>]
+;(debug,X=#5001,Y=#5002)
+#<y2>=[#5421+#5002]
+#<adjustment>=[[#<y1>+#<y2>]/2]
+;(debug, y adjustment #<adjustment>)
+g91 g1y[-#<adjustment>]
+
+
+#####################
+## second round ######
+#####################
+
+o<aux-probe-at-angle> call [0] [#<probe_distance>]
+;(debug,X=#5001,Y=#5002)
+#<x1>=[#5420+#5001]
+o<aux-probe-at-angle> call [180] [#<probe_distance>]
+;(debug,X=#5001,Y=#5002)
+#<x2>=[#5420+#5001]
+#<adjustment>=[[#<x1>+#<x2>]/2]
+;(debug, x adjustment #<adjustment>)
+g91 g1x[-#<adjustment>]
+
+o<aux-probe-at-angle> call [90] [#<probe_distance>]
+;(debug,X=#5001,Y=#5002)
+#<y1>=[#5421+#5002]
+o<aux-probe-at-angle> call [270] [#<probe_distance>]
+;(debug,X=#5001,Y=#5002)
+#<y2>=[#5421+#5002]
+#<adjustment>=[[#<y1>+#<y2>]/2]
+;(debug, y adjustment #<adjustment>)
+g91 g1y[-#<adjustment>]
+
+(debug,Spindle at centre of hole)
+
+o<p-hole> endsub
+m2

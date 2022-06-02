@@ -1,0 +1,37 @@
+;#############################
+; probe x,y pos and an angle
+o<aux-calibrate-probe-at-angle> sub
+;input params
+#<angle>=#1
+#<diam_hole>=#2
+#<diam_ball>=#3
+#<feednorm>=#4
+#<feedslow>=#5
+; setup vars
+#<radius> = [#<diam_hole>/2]
+#<radius_b> = [[#<diam_hole>/2]-8+[#<diam_ball>/2]]
+#<sin_a>=sin[#<angle>]
+#<cos_a>=cos[#<angle>]
+#<y-pos_b> =[#<sin_a>*#<radius_b>]
+#<y-pos_ok> =[#<sin_a>*#<radius>]
+#<x-pos_b> =[#<cos_a>*#<radius_b>]
+#<x-pos_ok> =[#<cos_a>*#<radius>]
+
+g90 g1 x#<x-pos_b> y#<y-pos_b> f#<feednorm>
+g90 g38.2 F#<feednorm> X#<x-pos_ok> Y#<y-pos_ok>
+g90 g1 X#<x-pos_b> Y#<y-pos_b> f#<feednorm>
+g90 g38.2 F#<feedslow> X#<x-pos_ok> Y#<y-pos_ok>
+#<x-touch>=#5420
+#<y-touch>=#5421
+#<radius_measured>=sqrt[[#<x-touch>*#<x-touch>]+[#<y-touch>*#<y-touch>]]
+o<probe-off-300-if>if[#<radius_measured> lt 0]
+  #<radius_measured>=[#<radius_measured>*-1]
+o<probe-off-300-if>endif
+#<probe-off-angle>=[#<radius_measured>-[#<diam_hole>/2]+[#<diam_ball>/2]]
+#<probe-off-angle>=[fix[#<probe-off-angle>*1000]/1000]
+g90 g1 X#<x-pos_b> Y#<y-pos_b> f#<feednorm>
+
+(debug, probe-at-angle #<angle>= #<probe-off-angle>)
+
+
+o<aux-calibrate-probe-at-angle> endsub [#<probe-off-angle>]
